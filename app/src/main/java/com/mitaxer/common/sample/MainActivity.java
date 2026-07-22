@@ -1,6 +1,7 @@
 package com.mitaxer.common.sample;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.view.Gravity;
@@ -44,18 +45,29 @@ public class MainActivity extends Activity {
                 XToast.make().setText("底部靠右")
                         .setGravity(Gravity.BOTTOM | Gravity.RIGHT, 0, 100)
                         .show()));
-        root.addView(btn("居中", v ->
+        root.addView(btn("屏幕居中", v ->
                 XToast.make().setText("屏幕居中")
                         .setGravity(Gravity.CENTER, 0, 0)
-                        .show()));
-        root.addView(btn("自定义位置", v ->
-                XToast.make().setText("自定义偏移")
-                        .setGravity(Gravity.TOP | Gravity.START, 50, 200)
                         .show()));
 
         // 长文测试
         root.addView(btn("长文字测试", v ->
                 XToast.showLong("这是一段很长的文字，用来测试最大宽度限制是否生效，看看会不会撑满屏幕")));
+
+        // Dialog 遮挡测试
+        root.addView(btn("Dialog + Toast", v -> {
+            AlertDialog dialog = new AlertDialog.Builder(this)
+                    .setTitle("测试 Dialog")
+                    .setMessage("Dialog 显示中，下面会弹 Toast，看是否能盖在 Dialog 之上")
+                    .setPositiveButton("知道了", null)
+                    .show();
+
+            // Dialog 不关闭，直接弹 Toast
+            XToast.make()
+                    .setText("这个 Toast 应该盖在 Dialog 上面")
+                    .setGravity(Gravity.CENTER, 0, 0)
+                    .show();
+        }));
 
         // 加滚动
         ScrollView sv = new ScrollView(this);

@@ -3,11 +3,6 @@ plugins {
     id("maven-publish")
 }
 
-repositories {
-    google()
-    mavenCentral()
-}
-
 android {
     namespace = "com.mitaxer.common"
     compileSdk = 34
