@@ -3,7 +3,7 @@
 
     <application>
         <provider
-            android:name=".XToastInitProvider"
+            android:name="com.mitaxer.toast.XToastInitProvider"
             android:authorities="${applicationId}.xtoast.init"
             android:exported="false"
             android:initOrder="100" />

@@ -3,11 +3,11 @@ plugins {
 }
 
 android {
-    namespace = "com.mitaxer.common.sample"
+    namespace = "com.mitaxer.toast.sample"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.mitaxer.common.sample"
+        applicationId = "com.mitaxer.toast.sample"
         minSdk = 21
         targetSdk = 34
         versionCode = 1

@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "com.mitaxer.common"
+    namespace = "com.mitaxer.toast"
     compileSdk = 34
 
     defaultConfig {

@@ -1,4 +1,4 @@
-package com.mitaxer.common;
+package com.mitaxer.toast;
 
 import android.app.Application;
 
