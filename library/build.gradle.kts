@@ -1,6 +1,5 @@
 plugins {
     id("com.android.library")
-    id("maven-publish")
 }
 
 android {
@@ -19,18 +18,4 @@ android {
 
 dependencies {
     implementation("androidx.annotation:annotation:1.7.1")
-}
-
-publishing {
-    publications {
-        register<MavenPublication>("release") {
-            groupId = "com.github.mitaxer"
-            artifactId = "andorid-toast"
-            version = System.getenv("VERSION") ?: "1.0.1"
-
-            afterEvaluate {
-                from(components["release"])
-            }
-        }
-    }
 }
