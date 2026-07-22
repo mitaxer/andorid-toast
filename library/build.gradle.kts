@@ -12,11 +12,11 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 
-    // 明确注册 release 组件给 maven-publish 使用
+    // 明确注册 release 组件�?maven-publish 使用
     publishing {
         singleVariant("release")
     }
