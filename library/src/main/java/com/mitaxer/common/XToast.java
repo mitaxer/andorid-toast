@@ -50,6 +50,14 @@ public final class XToast {
     private static final int DEFAULT_TEXT_COLOR = Color.parseColor("#FFFFFF");
     private static final int DEFAULT_BG_COLOR = Color.parseColor("#2B2B2B");
     private static final float DEFAULT_CORNER_RADIUS_DP = 24f;
+    private static final int MS_SHORT = 2000;
+    private static final int MS_LONG = 3500;
+
+    // Duration type constants
+    private static final int DUR_NOT_SET = 0;
+    private static final int DUR_SHORT = 1;
+    private static final int DUR_LONG = 2;
+    private static final int DUR_CUSTOM = 3;
 
     private static volatile XToastConfig sGlobalConfig;
     private static final Handler sMainHandler = new Handler(Looper.getMainLooper());
@@ -57,22 +65,23 @@ public final class XToast {
 
     private final XToastConfig mOverrideConfig = new XToastConfig();
     private CharSequence mText;
-    private int mDurationMs = -1;
+    private int mDurationType = DUR_NOT_SET;
+    private int mCustomDurationMs;
+
+    // gravity
+    private boolean mHasGravity;
+    private int mGravity;
+    private int mGravityX;
+    private int mGravityY;
 
     private XToast() {}
 
     // ====================== Global Config ======================
 
-    /**
-     * Set global default style. Call once in {@link Application#onCreate()}.
-     */
     public static void init(@NonNull XToastConfig config) {
         sGlobalConfig = config;
     }
 
-    /**
-     * Convenience: init with a consumer.
-     */
     public static void init(@NonNull Configurator configurator) {
         XToastConfig config = new XToastConfig();
         configurator.configure(config);
@@ -86,18 +95,25 @@ public final class XToast {
     // ====================== Quick Show ======================
 
     public static void showShort(@NonNull CharSequence text) {
-        make().setText(text).show();
+        XToast x = new XToast();
+        x.mText = text;
+        x.mDurationType = DUR_SHORT;
+        x.show();
     }
 
     public static void showLong(@NonNull CharSequence text) {
-        make().setText(text).setDuration(Toast.LENGTH_LONG).show();
+        XToast x = new XToast();
+        x.mText = text;
+        x.mDurationType = DUR_LONG;
+        x.show();
     }
 
-    /**
-     * Show with custom duration in milliseconds.
-     */
     public static void show(@NonNull CharSequence text, long durationMs) {
-        make().setText(text).setDuration(durationMs).show();
+        XToast x = new XToast();
+        x.mText = text;
+        x.mDurationType = DUR_CUSTOM;
+        x.mCustomDurationMs = (int) durationMs;
+        x.show();
     }
 
     // ====================== Builder ======================
@@ -112,12 +128,23 @@ public final class XToast {
     }
 
     /**
-     * Set duration in milliseconds.
-     * For custom ms, system Toast uses LENGTH_SHORT internally
-     * and we cancel after the specified time.
+     * Set duration in milliseconds. For LENGTH_SHORT / LENGTH_LONG,
+     * use {@link #showShort(CharSequence)} / {@link #showLong(CharSequence)}.
      */
     public XToast setDuration(long durationMs) {
-        mDurationMs = (int) durationMs;
+        mDurationType = DUR_CUSTOM;
+        mCustomDurationMs = (int) durationMs;
+        return this;
+    }
+
+    /**
+     * Set display position.
+     */
+    public XToast setGravity(int gravity, int xOffset, int yOffset) {
+        mHasGravity = true;
+        mGravity = gravity;
+        mGravityX = xOffset;
+        mGravityY = yOffset;
         return this;
     }
 
@@ -158,6 +185,40 @@ public final class XToast {
         return this;
     }
 
+    // ====================== Internal Duration Helpers ======================
+
+    /** Returns system Toast constant: LENGTH_SHORT or LENGTH_LONG */
+    private int resolveSysDuration() {
+        if (mDurationType == DUR_LONG) {
+            return Toast.LENGTH_LONG;
+        }
+        return Toast.LENGTH_SHORT;
+    }
+
+    /** Returns actual milliseconds for timing logic */
+    private int resolveDurationMs() {
+        switch (mDurationType) {
+            case DUR_LONG:
+                return MS_LONG;
+            case DUR_CUSTOM:
+                return mCustomDurationMs > 0 ? mCustomDurationMs : MS_SHORT;
+            default: // DUR_NOT_SET, DUR_SHORT
+                return MS_SHORT;
+        }
+    }
+
+    /**
+     * Returns the effective Toast duration to use when building a Toast object.<br>
+     * For short/long: use the system constant. For custom ms: use LENGTH_SHORT
+     * and rely on our own delayed cancel.
+     */
+    private int resolveToastDuration() {
+        if (mDurationType == DUR_CUSTOM) {
+            return Toast.LENGTH_SHORT;
+        }
+        return resolveSysDuration();
+    }
+
     // ====================== Show ======================
 
     public void show() {
@@ -171,50 +232,57 @@ public final class XToast {
                 sCurrentToast = null;
             }
 
-            int duration = resolveDurationMs();
             boolean hasCustomStyle = hasAnyCustomStyle();
 
             if (!hasCustomStyle) {
-                // Pure system default — no custom view overhead
+                // Pure system default
                 sCurrentToast = Toast.makeText(
-                        AppHolder.get(), mText,
-                        duration == 2000 ? Toast.LENGTH_SHORT : Toast.LENGTH_LONG);
+                        AppHolder.get(), mText, resolveSysDuration());
+                applyGravity(sCurrentToast);
                 sCurrentToast.show();
             } else {
-                // Build custom styled view
+                // Custom styled view
                 Toast toast = new Toast(AppHolder.get());
-                toast.setDuration(Toast.LENGTH_SHORT);
+                toast.setDuration(resolveToastDuration());
+                applyGravity(toast);
                 toast.setView(buildStyledView());
                 toast.show();
                 sCurrentToast = toast;
 
-                // Auto-cancel for custom durations
-                if (duration != 2000) {
-                    sMainHandler.postDelayed(() -> {
-                        if (sCurrentToast != null) {
-                            sCurrentToast.cancel();
-                            sCurrentToast = null;
-                        }
-                    }, duration);
+                // Delayed cancel only for custom durations
+                if (mDurationType == DUR_CUSTOM) {
+                    scheduleCancel(mCustomDurationMs > 0 ? mCustomDurationMs : MS_SHORT);
+                } else if (mDurationType == DUR_LONG) {
+                    scheduleCancel(MS_LONG);
                 }
             }
         });
     }
 
-    // ====================== Internal ======================
-
-    private int resolveDurationMs() {
-        if (mDurationMs != -1) {
-            return mDurationMs;
+    private void applyGravity(Toast toast) {
+        if (mHasGravity) {
+            toast.setGravity(mGravity, mGravityX, mGravityY);
         }
-        return 2000; // default to LENGTH_SHORT
     }
+
+    private void scheduleCancel(int delayMs) {
+        sMainHandler.postDelayed(() -> {
+            if (sCurrentToast != null) {
+                sCurrentToast.cancel();
+                sCurrentToast = null;
+            }
+        }, delayMs);
+    }
+
+    // ====================== Style Checks ======================
 
     private boolean hasAnyCustomStyle() {
         XToastConfig global = sGlobalConfig;
         return (global != null && global.hasAny())
                 || mOverrideConfig.hasAny();
     }
+
+    // ====================== View Building ======================
 
     private View buildStyledView() {
         XToastConfig merged = mergeConfig();
@@ -237,8 +305,10 @@ public final class XToast {
 
         // Padding
         if (merged.getPaddingHorizontal() > 0 || merged.getPaddingVertical() > 0) {
-            float ph = merged.getPaddingHorizontal() > 0 ? merged.getPaddingHorizontal() * density : 24f * density;
-            float pv = merged.getPaddingVertical() > 0 ? merged.getPaddingVertical() * density : 12f * density;
+            float ph = merged.getPaddingHorizontal() > 0
+                    ? merged.getPaddingHorizontal() * density : 24f * density;
+            float pv = merged.getPaddingVertical() > 0
+                    ? merged.getPaddingVertical() * density : 12f * density;
             tv.setPadding((int) ph, (int) pv, (int) ph, (int) pv);
         }
 
@@ -256,6 +326,8 @@ public final class XToast {
 
         return container;
     }
+
+    // ====================== Config Merge ======================
 
     private XToastConfig mergeConfig() {
         XToastConfig global = sGlobalConfig;
