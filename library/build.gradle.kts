@@ -33,7 +33,7 @@ afterEvaluate {
                 from(components["release"])
                 groupId = "com.github.mitaxer"
                 artifactId = "android-toast"
-                version = System.getenv("VERSION") ?: "1.0.3"
+                version = System.getenv("VERSION") ?: "1.0"
             }
         }
     }
