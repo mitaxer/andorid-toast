@@ -8,3 +8,7 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# ignore build outputs from all modules
+app/build/
+library/build/
