@@ -80,6 +80,11 @@ public final class XToast {
         x.show();
     }
 
+    /** 显示默认时长的 Toast，等同于 showShort。 */
+    public static void show(@NonNull CharSequence text) {
+        showShort(text);
+    }
+
     /** 显示长 Toast（约 3.5s）。 */
     public static void showLong(@NonNull CharSequence text) {
         XToast x = new XToast();
