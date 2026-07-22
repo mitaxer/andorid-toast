@@ -17,14 +17,15 @@ android {
     }
 }
 
-afterEvaluate {
-    publishing {
-        publications {
-            create<MavenPublication>("release") {
+publishing {
+    publications {
+        register<MavenPublication>("release") {
+            groupId = "com.github.mitaxer"
+            artifactId = "andorid-toast"
+            version = System.getenv("VERSION") ?: "1.0.1"
+
+            afterEvaluate {
                 from(components["release"])
-                groupId = "com.github.mitaxer"
-                artifactId = "andorid-toast"
-                version = System.getenv("VERSION") ?: "1.0.0"
             }
         }
     }
