@@ -32,7 +32,7 @@ afterEvaluate {
             register<MavenPublication>("release") {
                 from(components["release"])
                 groupId = "com.github.mitaxer"
-                artifactId = "andorid-toast"
+                artifactId = "android-toast"
                 version = System.getenv("VERSION") ?: "1.0.3"
             }
         }
