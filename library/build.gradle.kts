@@ -17,6 +17,10 @@ android {
     }
 }
 
+dependencies {
+    implementation("androidx.annotation:annotation:1.7.1")
+}
+
 publishing {
     publications {
         register<MavenPublication>("release") {
