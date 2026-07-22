@@ -8,3 +8,4 @@ pluginManagement {
 
 rootProject.name = "andorid-toast"
 include(":library")
+include(":app")
