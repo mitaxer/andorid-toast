@@ -23,6 +23,7 @@ public class MainActivity extends Activity {
         root.setPadding(32, 32, 32, 32);
 
         root.addView(btn("default Short", v -> XToast.showShort("save success")));
+        root.addView(btn("XToast.show(text)", v -> XToast.show("just show")));
         root.addView(btn("default Long", v -> XToast.showLong("loading...")));
         root.addView(btn("custom 5s", v -> XToast.show("custom duration", 5000)));
 

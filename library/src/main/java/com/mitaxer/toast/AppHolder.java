@@ -15,6 +15,9 @@ final class AppHolder {
     private AppHolder() {}
 
     static void init(@NonNull Application app) {
+        if (app == null) {
+            throw new IllegalStateException("XToast: AppHolder.init() got null Application");
+        }
         sApp = app;
     }
 

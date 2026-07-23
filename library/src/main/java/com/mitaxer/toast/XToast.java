@@ -1,5 +1,6 @@
 package com.mitaxer.toast;
 
+import android.app.Application;
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Handler;
@@ -201,34 +202,41 @@ public final class XToast {
         if (mText == null || mText.length() == 0) return;
 
         sMainHandler.post(() -> {
-            // 取消上一个
-            if (sCurrentToast != null) {
-                sCurrentToast.cancel();
-                sMainHandler.removeCallbacksAndMessages(null);
-                sCurrentToast = null;
-            }
-
-            boolean hasCustomStyle = hasAnyCustomStyle();
-
-            if (!hasCustomStyle) {
-                // 系统原生路径
-                sCurrentToast = Toast.makeText(AppHolder.get(), mText, resolveSysDuration());
-                applyGravity(sCurrentToast);
-                sCurrentToast.show();
-            } else {
-                // 自定义 View 路径
-                Toast toast = new Toast(AppHolder.get());
-                toast.setDuration(resolveToastDuration());
-                applyGravity(toast);
-                toast.setView(buildStyledView());
-                toast.show();
-                sCurrentToast = toast;
-
-                if (mDurationType == DUR_CUSTOM) {
-                    scheduleCancel(mCustomDurationMs > 0 ? mCustomDurationMs : MS_SHORT);
-                } else if (mDurationType == DUR_LONG) {
-                    scheduleCancel(MS_LONG);
+            Application app = AppHolder.get();
+            try {
+                // 取消上一个
+                if (sCurrentToast != null) {
+                    sCurrentToast.cancel();
+                    sMainHandler.removeCallbacksAndMessages(null);
+                    sCurrentToast = null;
                 }
+
+                boolean hasCustomStyle = hasAnyCustomStyle();
+
+                if (!hasCustomStyle) {
+                    // 系统原生路径
+                    sCurrentToast = Toast.makeText(app, mText, resolveSysDuration());
+                    applyGravity(sCurrentToast);
+                    sCurrentToast.show();
+                } else {
+                    // 自定义 View 路径
+                    Toast toast = new Toast(app);
+                    toast.setDuration(resolveToastDuration());
+                    applyGravity(toast);
+                    toast.setView(buildStyledView());
+                    toast.show();
+                    sCurrentToast = toast;
+
+                    if (mDurationType == DUR_CUSTOM) {
+                        scheduleCancel(mCustomDurationMs > 0 ? mCustomDurationMs : MS_SHORT);
+                    } else if (mDurationType == DUR_LONG) {
+                        scheduleCancel(MS_LONG);
+                    }
+                }
+            } catch (Exception e) {
+                throw new RuntimeException("XToast.show() failed, app=" + app
+                        + " class=" + app.getClass().getName()
+                        + " hasCustomStyle=" + hasAnyCustomStyle(), e);
             }
         });
     }
