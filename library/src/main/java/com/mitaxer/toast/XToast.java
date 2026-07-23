@@ -278,6 +278,7 @@ public final class XToast {
         sCurrentToast = Toast.makeText(app, mText, resolveSysDuration());
         applyGravity(sCurrentToast);
         sCurrentToast.show();
+        scheduleCleanup(resolveDurationMs());
     }
 
     private void showCustomToast(Application app) {
@@ -287,27 +288,23 @@ public final class XToast {
         toast.setView(buildStyledView());
         toast.show();
         sCurrentToast = toast;
-
-        if (mDurationType == DUR_CUSTOM) {
-            scheduleCancel(mCustomDurationMs > 0 ? mCustomDurationMs : MS_SHORT);
-        } else if (mDurationType == DUR_LONG) {
-            scheduleCancel(MS_LONG);
-        }
+        scheduleCleanup(resolveDurationMs());
     }
 
-    private void applyGravity(Toast toast) {
-        if (mHasGravity) {
-            toast.setGravity(mGravity, mGravityX, mGravityY);
-        }
-    }
-
-    private void scheduleCancel(int delayMs) {
+    /** Toast 显示结束后清除静态引用，避免内存泄漏。 */
+    private void scheduleCleanup(int delayMs) {
         sMainHandler.postDelayed(() -> {
             if (sCurrentToast != null) {
                 sCurrentToast.cancel();
                 sCurrentToast = null;
             }
         }, delayMs);
+    }
+
+    private void applyGravity(Toast toast) {
+        if (mHasGravity) {
+            toast.setGravity(mGravity, mGravityX, mGravityY);
+        }
     }
 
     // ==================== 样式检测 ====================
