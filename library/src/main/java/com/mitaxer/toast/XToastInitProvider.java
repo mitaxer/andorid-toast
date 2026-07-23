@@ -19,15 +19,8 @@ public final class XToastInitProvider extends ContentProvider {
 
     @Override
     public boolean onCreate() {
-        try {
-            Application app = (Application) getContext().getApplicationContext();
-            // 快速验证：用此 Application 创建 Toast 是否正常
-            android.widget.Toast.makeText(app, "", android.widget.Toast.LENGTH_SHORT).show();
-            AppHolder.init(app);
-        } catch (Exception e) {
-            throw new RuntimeException("XToastInitProvider: cannot create Toast with Application: "
-                    + getContext() + " / " + getContext().getApplicationContext(), e);
-        }
+        Application app = (Application) getContext().getApplicationContext();
+        AppHolder.init(app);
         return false;
     }
 

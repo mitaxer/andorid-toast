@@ -3,6 +3,7 @@ package com.mitaxer.toast;
 import android.graphics.Color;
 
 import androidx.annotation.ColorInt;
+import androidx.annotation.NonNull;
 
 /**
  * XToast 样式配置模型。
@@ -28,13 +29,52 @@ public final class XToastConfig {
     private boolean hasMaxWidthDp;
     private boolean hasPadding;
 
+    /**
+     * 若传入的 int 颜色无 alpha 通道（即 alpha 为 0），
+     * 自动补上 0xFF 使其不透明。
+     */
+    private static int fixAlpha(int color) {
+        int alpha = (color >> 24) & 0xFF;
+        if (alpha == 0) {
+            // alpha 为 0 通常是用户写了 0xRRGGBB 但忘了 FF 前缀
+            return color | 0xFF000000;
+        }
+        return color;
+    }
+
+    /**
+     * 支持 #RRGGBB / #AARRGGBB / 0xRRGGBB / 0xAARRGGBB
+     */
+    private static int parseHexString(String hex) {
+        String cleaned = hex.trim();
+        if (!cleaned.startsWith("#") && !cleaned.startsWith("0x") && !cleaned.startsWith("0X")) {
+            throw new IllegalArgumentException("Color string must start with # or 0x: " + hex);
+        }
+        if (cleaned.startsWith("0x") || cleaned.startsWith("0X")) {
+            cleaned = "#" + cleaned.substring(2);
+        }
+        // #RRGGBB 转为 #AARRGGBB
+        if (cleaned.length() == 7) {
+            cleaned = "#FF" + cleaned.substring(1);
+        }
+        return Color.parseColor(cleaned);
+    }
+
     // ========== Setter（Builder 链式调用） ==========
 
-    /** 设置背景颜色。 */
+    /** 设置背景颜色（int 格式，如 0xFFFFF0FF）。若 alpha 为 0 则自动补为不透明。 */
     public XToastConfig setBgColor(@ColorInt int color) {
-        this.bgColor = color;
+        this.bgColor = fixAlpha(color);
         this.hasBgColor = true;
         return this;
+    }
+
+    /**
+     * 设置背景颜色（字符串格式）。
+     * 支持 "#FFFFF0"、"#FFFFF0FF"、"0xFFFFF0"、"0xFFFFF0FF"
+     */
+    public XToastConfig setBgColor(@NonNull String hexColor) {
+        return setBgColor(parseHexString(hexColor));
     }
 
     /** 设置圆角半径（dp）。 */
@@ -44,11 +84,19 @@ public final class XToastConfig {
         return this;
     }
 
-    /** 设置文字颜色。 */
+    /** 设置文字颜色（int 格式，如 0xFF333333）。若 alpha 为 0 则自动补为不透明。 */
     public XToastConfig setTextColor(@ColorInt int color) {
-        this.textColor = color;
+        this.textColor = fixAlpha(color);
         this.hasTextColor = true;
         return this;
+    }
+
+    /**
+     * 设置文字颜色（字符串格式）。
+     * 支持 "#333333"、"#FF333333"、"0x333333"、"0xFF333333"
+     */
+    public XToastConfig setTextColor(@NonNull String hexColor) {
+        return setTextColor(parseHexString(hexColor));
     }
 
     /** 设置文字字号（sp）。 */

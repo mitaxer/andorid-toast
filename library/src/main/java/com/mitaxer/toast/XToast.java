@@ -73,33 +73,32 @@ public final class XToast {
 
     // ==================== 快速调用 ====================
 
-    /** 显示短 Toast（约 2s）。 */
-    public static void showShort(@NonNull CharSequence text) {
-        XToast x = new XToast();
-        x.mText = text;
-        x.mDurationType = DUR_SHORT;
-        x.show();
+    /** 显示短 Toast（约 2s）。text 为 null 或空字符串时静默忽略。 */
+    public static void showShort(CharSequence text) {
+        show(text, DUR_SHORT, 0);
     }
 
     /** 显示默认时长的 Toast，等同于 showShort。 */
-    public static void show(@NonNull CharSequence text) {
+    public static void show(CharSequence text) {
         showShort(text);
     }
 
-    /** 显示长 Toast（约 3.5s）。 */
-    public static void showLong(@NonNull CharSequence text) {
-        XToast x = new XToast();
-        x.mText = text;
-        x.mDurationType = DUR_LONG;
-        x.show();
+    /** 显示长 Toast（约 3.5s）。text 为 null 或空字符串时静默忽略。 */
+    public static void showLong(CharSequence text) {
+        show(text, DUR_LONG, 0);
     }
 
-    /** 显示自定义时长的 Toast（毫秒）。 */
-    public static void show(@NonNull CharSequence text, long durationMs) {
+    /** 显示自定义时长的 Toast（毫秒）。text 为 null 或空字符串时静默忽略。 */
+    public static void show(CharSequence text, long durationMs) {
+        show(text, DUR_CUSTOM, (int) durationMs);
+    }
+
+    private static void show(CharSequence text, int durationType, int customDurationMs) {
+        if (text == null || text.length() == 0) return;
         XToast x = new XToast();
         x.mText = text;
-        x.mDurationType = DUR_CUSTOM;
-        x.mCustomDurationMs = (int) durationMs;
+        x.mDurationType = durationType;
+        x.mCustomDurationMs = customDurationMs;
         x.show();
     }
 
@@ -110,8 +109,8 @@ public final class XToast {
         return new XToast();
     }
 
-    /** 设置待显示的文本。 */
-    public XToast setText(@NonNull CharSequence text) {
+    /** 设置待显示的文本。传 null 或空字符串时 show() 不会显示。 */
+    public XToast setText(CharSequence text) {
         mText = text;
         return this;
     }
@@ -143,6 +142,11 @@ public final class XToast {
         return this;
     }
 
+    public XToast setBgColor(@NonNull String hexColor) {
+        mOverrideConfig.setBgColor(hexColor);
+        return this;
+    }
+
     public XToast setCornerRadius(float radiusDp) {
         mOverrideConfig.setCornerRadius(radiusDp);
         return this;
@@ -150,6 +154,11 @@ public final class XToast {
 
     public XToast setTextColor(@ColorInt int color) {
         mOverrideConfig.setTextColor(color);
+        return this;
+    }
+
+    public XToast setTextColor(@NonNull String hexColor) {
+        mOverrideConfig.setTextColor(hexColor);
         return this;
     }
 
@@ -203,42 +212,50 @@ public final class XToast {
 
         sMainHandler.post(() -> {
             Application app = AppHolder.get();
-            try {
-                // 取消上一个
-                if (sCurrentToast != null) {
-                    sCurrentToast.cancel();
-                    sMainHandler.removeCallbacksAndMessages(null);
-                    sCurrentToast = null;
+
+            // 取消上一个
+            cancelCurrent();
+
+            if (!hasAnyCustomStyle()) {
+                showSystemToast(app);
+            } else {
+                try {
+                    showCustomToast(app);
+                } catch (Exception e) {
+                    // 自定义样式失败，降级为系统默认样式
+                    showSystemToast(app);
                 }
-
-                boolean hasCustomStyle = hasAnyCustomStyle();
-
-                if (!hasCustomStyle) {
-                    // 系统原生路径
-                    sCurrentToast = Toast.makeText(app, mText, resolveSysDuration());
-                    applyGravity(sCurrentToast);
-                    sCurrentToast.show();
-                } else {
-                    // 自定义 View 路径
-                    Toast toast = new Toast(app);
-                    toast.setDuration(resolveToastDuration());
-                    applyGravity(toast);
-                    toast.setView(buildStyledView());
-                    toast.show();
-                    sCurrentToast = toast;
-
-                    if (mDurationType == DUR_CUSTOM) {
-                        scheduleCancel(mCustomDurationMs > 0 ? mCustomDurationMs : MS_SHORT);
-                    } else if (mDurationType == DUR_LONG) {
-                        scheduleCancel(MS_LONG);
-                    }
-                }
-            } catch (Exception e) {
-                throw new RuntimeException("XToast.show() failed, app=" + app
-                        + " class=" + app.getClass().getName()
-                        + " hasCustomStyle=" + hasAnyCustomStyle(), e);
             }
         });
+    }
+
+    private void cancelCurrent() {
+        if (sCurrentToast != null) {
+            sCurrentToast.cancel();
+            sMainHandler.removeCallbacksAndMessages(null);
+            sCurrentToast = null;
+        }
+    }
+
+    private void showSystemToast(Application app) {
+        sCurrentToast = Toast.makeText(app, mText, resolveSysDuration());
+        applyGravity(sCurrentToast);
+        sCurrentToast.show();
+    }
+
+    private void showCustomToast(Application app) {
+        Toast toast = new Toast(app);
+        toast.setDuration(resolveToastDuration());
+        applyGravity(toast);
+        toast.setView(buildStyledView());
+        toast.show();
+        sCurrentToast = toast;
+
+        if (mDurationType == DUR_CUSTOM) {
+            scheduleCancel(mCustomDurationMs > 0 ? mCustomDurationMs : MS_SHORT);
+        } else if (mDurationType == DUR_LONG) {
+            scheduleCancel(MS_LONG);
+        }
     }
 
     private void applyGravity(Toast toast) {
