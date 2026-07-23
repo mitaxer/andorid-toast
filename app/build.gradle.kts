@@ -27,6 +27,6 @@ android {
 }
 
 dependencies {
-//    implementation(project(":library"))
-    api("com.github.mitaxer:android-toast:1.0.10")
+    implementation(project(":library"))
+//    api("com.github.mitaxer:android-toast:1.0.10")
 }

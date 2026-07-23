@@ -25,6 +25,14 @@ import androidx.annotation.NonNull;
  */
 public final class XToast {
 
+    /** 预设主题模式 */
+    public enum Mode {
+        /** 浅色：近白底 + 深灰字 */
+        LIGHT,
+        /** 深色：深灰底 + 白字 */
+        DARK
+    }
+
     private static final int DEFAULT_TEXT_COLOR = Color.parseColor("#FFFFFF");
     private static final int DEFAULT_BG_COLOR = Color.parseColor("#2B2B2B");
     private static final float DEFAULT_CORNER_RADIUS_DP = 24f;
@@ -37,7 +45,9 @@ public final class XToast {
     private static final int DUR_LONG = 2;
     private static final int DUR_CUSTOM = 3;
 
-    private static volatile XToastConfig sGlobalConfig;
+    private static XToastConfig sLightPreset;
+    private static XToastConfig sDarkPreset;
+    private static volatile XToastConfig sActiveConfig;
     private static final Handler sMainHandler = new Handler(Looper.getMainLooper());
     private static Toast sCurrentToast;
 
@@ -55,16 +65,43 @@ public final class XToast {
 
     // ==================== 全局配置 ====================
 
-    /** 设置全局默认样式。在 Application.onCreate() 中调用一次即可。 */
-    public static void init(@NonNull XToastConfig config) {
-        sGlobalConfig = config;
+    static {
+        sLightPreset = new XToastConfig();
+        sLightPreset.setMode(Mode.LIGHT);
+        sDarkPreset = new XToastConfig();
+        sDarkPreset.setMode(Mode.DARK);
+        sActiveConfig = sLightPreset;
     }
 
-    /** 设置全局默认样式（Lambda 方式）。 */
+    /** 设置自定义配色。不影响 LIGHT/DARK 预设。 */
+    public static void init(@NonNull XToastConfig config) {
+        sActiveConfig = config;
+    }
+
+    /** 设置自定义配色（Lambda 方式）。不影响 LIGHT/DARK 预设。 */
     public static void init(@NonNull Configurator configurator) {
         XToastConfig config = new XToastConfig();
         configurator.configure(config);
-        sGlobalConfig = config;
+        sActiveConfig = config;
+    }
+
+    /** 同时配置白天/夜间预设颜色（在 Application 初始化时调用）。不调则用默认值。 */
+    public static void init(@NonNull Configurator light, @NonNull Configurator dark) {
+        sLightPreset = new XToastConfig();
+        light.configure(sLightPreset);
+        sDarkPreset = new XToastConfig();
+        dark.configure(sDarkPreset);
+        sActiveConfig = sLightPreset;
+    }
+
+    /** 切换到 LIGHT 预设（出厂默认 或 init(light,dark) 配置的值）。 */
+    public static void useLightMode() {
+        sActiveConfig = sLightPreset;
+    }
+
+    /** 切换到 DARK 预设（出厂默认 或 init(light,dark) 配置的值）。 */
+    public static void useDarkMode() {
+        sActiveConfig = sDarkPreset;
     }
 
     public interface Configurator {
@@ -277,8 +314,7 @@ public final class XToast {
 
     /** 判断是否有自定义样式（全局 + 单次覆盖），都没有则走系统原生路径。 */
     private boolean hasAnyCustomStyle() {
-        XToastConfig global = sGlobalConfig;
-        return (global != null && global.hasAny()) || mOverrideConfig.hasAny();
+        return (sActiveConfig != null && sActiveConfig.hasAny()) || mOverrideConfig.hasAny();
     }
 
     // ==================== 自定义 View 构建 ====================
@@ -300,11 +336,9 @@ public final class XToast {
         }
         tv.setGravity(Gravity.CENTER);
 
-        if (merged.getPaddingHorizontal() > 0 || merged.getPaddingVertical() > 0) {
-            float ph = merged.getPaddingHorizontal() > 0 ? merged.getPaddingHorizontal() * density : 24f * density;
-            float pv = merged.getPaddingVertical() > 0 ? merged.getPaddingVertical() * density : 12f * density;
-            tv.setPadding((int) ph, (int) pv, (int) ph, (int) pv);
-        }
+        float ph = merged.getPaddingHorizontal() > 0 ? merged.getPaddingHorizontal() * density : 24f * density;
+        float pv = merged.getPaddingVertical() > 0 ? merged.getPaddingVertical() * density : 12f * density;
+        tv.setPadding((int) ph, (int) pv, (int) ph, (int) pv);
 
         if (merged.getMaxWidthDp() > 0) {
             tv.setMaxWidth((int) (merged.getMaxWidthDp() * density));
@@ -322,16 +356,40 @@ public final class XToast {
 
     /** 合并全局和单次配置：覆盖属性优先，未设置的回退到全局。 */
     private XToastConfig mergeConfig() {
-        XToastConfig global = sGlobalConfig;
-        if (global == null) return mOverrideConfig;
+        XToastConfig active = sActiveConfig;
+        if (active == null) return mOverrideConfig;
 
         XToastConfig result = new XToastConfig();
-        result.setBgColor(mOverrideConfig.hasBgColor() ? mOverrideConfig.getBgColor() : global.getBgColor());
-        result.setCornerRadius(mOverrideConfig.hasCornerRadius() ? mOverrideConfig.getCornerRadius() : global.getCornerRadius());
-        result.setTextColor(mOverrideConfig.hasTextColor() ? mOverrideConfig.getTextColor() : global.getTextColor());
-        result.setTextSizeSp(mOverrideConfig.hasTextSizeSp() ? mOverrideConfig.getTextSizeSp() : global.getTextSizeSp());
-        result.setMaxWidthDp(mOverrideConfig.hasMaxWidthDp() ? mOverrideConfig.getMaxWidthDp() : global.getMaxWidthDp());
-        result.setPadding(mOverrideConfig.hasPadding() ? mOverrideConfig : global);
+        if (mOverrideConfig.hasBgColor()) {
+            result.setBgColor(mOverrideConfig.getBgColor());
+        } else if (active.hasBgColor()) {
+            result.setBgColor(active.getBgColor());
+        }
+        if (mOverrideConfig.hasCornerRadius()) {
+            result.setCornerRadius(mOverrideConfig.getCornerRadius());
+        } else if (active.hasCornerRadius()) {
+            result.setCornerRadius(active.getCornerRadius());
+        }
+        if (mOverrideConfig.hasTextColor()) {
+            result.setTextColor(mOverrideConfig.getTextColor());
+        } else if (active.hasTextColor()) {
+            result.setTextColor(active.getTextColor());
+        }
+        if (mOverrideConfig.hasTextSizeSp()) {
+            result.setTextSizeSp(mOverrideConfig.getTextSizeSp());
+        } else if (active.hasTextSizeSp()) {
+            result.setTextSizeSp(active.getTextSizeSp());
+        }
+        if (mOverrideConfig.hasMaxWidthDp()) {
+            result.setMaxWidthDp(mOverrideConfig.getMaxWidthDp());
+        } else if (active.hasMaxWidthDp()) {
+            result.setMaxWidthDp(active.getMaxWidthDp());
+        }
+        if (mOverrideConfig.hasPadding()) {
+            result.setPadding(mOverrideConfig);
+        } else if (active.hasPadding()) {
+            result.setPadding(active);
+        }
         return result;
     }
 }

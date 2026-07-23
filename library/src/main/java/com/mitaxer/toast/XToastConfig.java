@@ -14,13 +14,25 @@ import androidx.annotation.NonNull;
  */
 public final class XToastConfig {
 
+    // ========== 出厂默认常量 ==========
+
+    public static final int LIGHT_BG = 0x55C0C0C0;
+    public static final int LIGHT_TEXT = 0xFF333333;
+    public static final int DARK_BG = 0xFF2B2B2B;
+    public static final int DARK_TEXT = 0xFFFFFFFF;
+    public static final float DEF_CORNER_RADIUS = 8f;
+    public static final float DEF_TEXT_SIZE = 15f;
+    public static final float DEF_MAX_WIDTH = 320f;
+    public static final float DEF_PADDING_H = 16f;
+    public static final float DEF_PADDING_V = 8f;
+
     private int bgColor = Color.TRANSPARENT;
-    private float cornerRadius = -1f;
+    private float cornerRadius = DEF_CORNER_RADIUS;
     private int textColor = Color.TRANSPARENT;
-    private float textSizeSp = -1f;
-    private float maxWidthDp = -1f;
-    private float paddingHorizontal = -1f;
-    private float paddingVertical = -1f;
+    private float textSizeSp = DEF_TEXT_SIZE;
+    private float maxWidthDp = DEF_MAX_WIDTH;
+    private float paddingHorizontal = DEF_PADDING_H;
+    private float paddingVertical = DEF_PADDING_V;
 
     private boolean hasBgColor;
     private boolean hasCornerRadius;
@@ -58,6 +70,35 @@ public final class XToastConfig {
             cleaned = "#FF" + cleaned.substring(1);
         }
         return Color.parseColor(cleaned);
+    }
+
+    // ========== 主题预设 ==========
+
+    /**
+     * 应用预设主题。会覆盖之前设置的 bgColor / textColor。
+     * 在此之后仍可调用 setBgColor / setTextColor 单独覆盖。
+     */
+    public XToastConfig setMode(@NonNull XToast.Mode mode) {
+        switch (mode) {
+            case LIGHT:
+                this.bgColor = LIGHT_BG;
+                this.textColor = LIGHT_TEXT;
+                break;
+            case DARK:
+                this.bgColor = DARK_BG;
+                this.textColor = DARK_TEXT;
+                break;
+        }
+        this.hasBgColor = true;
+        this.hasTextColor = true;
+        if (!hasCornerRadius) this.cornerRadius = DEF_CORNER_RADIUS;
+        if (!hasPadding) {
+            this.paddingHorizontal = DEF_PADDING_H;
+            this.paddingVertical = DEF_PADDING_V;
+        }
+        this.hasCornerRadius = true;
+        this.hasPadding = true;
+        return this;
     }
 
     // ========== Setter（Builder 链式调用） ==========
